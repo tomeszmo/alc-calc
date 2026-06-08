@@ -1270,7 +1270,7 @@
     ═══════════════════════════════════════════════ */
     function renderCalendar() {
       const { year, month } = state;
-      const allData = loadAll();
+      const allData = getDisplayData();
       const grid    = document.getElementById('calendar-grid');
 
       document.getElementById('month-label').textContent   = `${MONTHS[month]} ${year}`;
