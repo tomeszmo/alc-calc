@@ -136,7 +136,7 @@
     /* Share panel */
     .share-panel {
       display: none;
-      align-items: center;
+      flex-direction: column;
       gap: 8px;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -145,6 +145,35 @@
       margin-bottom: 12px;
     }
     .share-panel.visible { display: flex; }
+    .share-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .share-name-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .share-name-input {
+      flex: 1;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      padding: 5px 10px;
+      outline: none;
+      font-family: inherit;
+    }
+    .share-name-input:focus { border-color: var(--text-secondary); }
+    .share-url-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     .share-url {
       flex: 1;
       font-size: 11px;
@@ -915,8 +944,14 @@
       <button class="icon-btn" id="share-btn" aria-label="Naptár megosztása">⬆</button>
     </header>
     <div class="share-panel" id="share-panel">
-      <span class="share-url" id="share-url-text"></span>
-      <button class="copy-btn" id="copy-btn" aria-label="Link másolása">📋</button>
+      <div class="share-name-row">
+        <label class="share-name-label" for="share-name-input">Neved</label>
+        <input type="text" id="share-name-input" class="share-name-input" placeholder="pl. Gino Sanchez" maxlength="30">
+      </div>
+      <div class="share-url-row">
+        <span class="share-url" id="share-url-text"></span>
+        <button class="copy-btn" id="copy-btn" aria-label="Link másolása">📋</button>
+      </div>
     </div>
     <div class="friend-banner" id="friend-banner">
       <span>👁 Barát naptárát nézed — csak olvasható</span>
@@ -1117,6 +1152,18 @@
     let friendMode = false;
     let friendData = {};
     function getDisplayData() { return friendMode ? friendData : loadAll(); }
+
+    const NAME_KEY = 'alcohol_calendar_name';
+    function loadName() { return localStorage.getItem(NAME_KEY) || ''; }
+    function saveName(n) { n ? localStorage.setItem(NAME_KEY, n) : localStorage.removeItem(NAME_KEY); }
+
+    function generateShareUrl() {
+      const name = document.getElementById('share-name-input').value.trim();
+      saveName(name);
+      const payload = { name, data: loadAll() };
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+      return `${location.origin}${location.pathname}#share=${encoded}`;
+    }
 
     /* ═══════════════════════════════════════════════
        LOCALSTORAGE
@@ -1574,12 +1621,19 @@
         panel.classList.remove('visible');
         return;
       }
-      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(loadAll()))));
-      const url = `${location.origin}${location.pathname}#share=${encoded}`;
+      document.getElementById('share-name-input').value = loadName();
+      const url = generateShareUrl();
       const urlEl = document.getElementById('share-url-text');
       urlEl.textContent = url;
       urlEl.dataset.full = url;
       panel.classList.add('visible');
+    });
+
+    document.getElementById('share-name-input').addEventListener('input', () => {
+      const url = generateShareUrl();
+      const urlEl = document.getElementById('share-url-text');
+      urlEl.textContent = url;
+      urlEl.dataset.full = url;
     });
 
     document.getElementById('copy-btn').addEventListener('click', () => {
@@ -1604,14 +1658,25 @@
       const hash = location.hash;
       if (!hash.startsWith('#share=')) return;
       try {
-        const decoded = JSON.parse(decodeURIComponent(escape(atob(hash.slice(7)))));
+        const raw = JSON.parse(decodeURIComponent(escape(atob(hash.slice(7)))));
+        let decoded, ownerName = '';
+        if (raw && raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
+          decoded = raw.data;
+          ownerName = (raw.name || '').trim();
+        } else {
+          decoded = raw;
+        }
         if (typeof decoded !== 'object' || Array.isArray(decoded) || decoded === null) return;
         for (const val of Object.values(decoded)) {
           if (typeof val !== 'object' || !Array.isArray(val.drinks)) return;
         }
         friendMode = true;
         friendData = decoded;
-        document.getElementById('friend-banner').classList.add('visible');
+        const banner = document.getElementById('friend-banner');
+        banner.querySelector('span').textContent = ownerName
+          ? `${ownerName} naptárát nézed — csak olvasható`
+          : '👁 Barát naptárát nézed — csak olvasható';
+        banner.classList.add('visible');
         document.getElementById('share-btn').style.display = 'none';
       } catch(e) { /* érvénytelen link */ }
     })();
