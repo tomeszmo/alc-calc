@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Alcohol Calendar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+
+    /* ══════════════════════════════════════════════════
+       DESIGN TOKENS
+    ══════════════════════════════════════════════════ */
+    :root {
+      /* Surfaces */
+      --bg:              #121212;
+      --surface:         #1e1e1e;
+      --surface-raised:  #252525;
+      --border:          #2d2d2d;
+
+      /* Typography */
+      --text-primary:    #ffffff;
+      --text-secondary:  #a0a0a0;
+
+      /* Day state palettes */
+      --dry:             #1e1e1e;
+      --mild-bg:         #0d2b1a;
+      --mild-accent:     #4ade80;
+      --moderate-bg:     #2b2100;
+      --moderate-accent: #fbbf24;
+      --heavy-bg:        #2b0d0d;
+      --heavy-accent:    #f87171;
+
+      /* Shape */
+      --r-sm:  8px;
+      --r-md:  12px;
+      --r-lg:  16px;
+      --r-xl:  24px;
+
+      /* Font */
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+      /* Motion */
+      --t-fast:  150ms ease;
+      --t-mid:   250ms ease;
+      --t-sheet: 380ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       RESET
+    ══════════════════════════════════════════════════ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100%;
+      min-height: 100dvh;
+      overscroll-behavior-y: none;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       APP SHELL
+    ══════════════════════════════════════════════════ */
+    #app {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 0 16px calc(48px + env(safe-area-inset-bottom, 0px));
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       HEADER
+    ══════════════════════════════════════════════════ */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: max(20px, env(safe-area-inset-top, 20px));
+      padding-bottom: 20px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    .app-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+    }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-secondary);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+
+    .icon-btn:active {
+      background: var(--surface-raised);
+      color: var(--text-primary);
+    }
+
+    /* Share panel */
+    .share-panel {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .share-panel.visible { display: flex; }
+    .share-url {
+      flex: 1;
+      font-size: 11px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: monospace;
+    }
+    .copy-btn {
+      flex-shrink: 0;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+    .copy-btn:active { background: var(--border); }
+    .copy-btn.copied { color: var(--mild-accent); }
+
+    /* Friend banner */
+    .friend-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .friend-banner.visible { display: flex; }
+    .friend-banner-own {
+      margin-left: auto;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* ══════════════════════════════════════════════════
+       MONTH NAVIGATION
+    ══════════════════════════════════════════════════ */
+    .month-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .nav-btn {
+      width: 44px;
+      height: 44px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-primary);
+      font-size: 26px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-fast);
+    }
+
+    .nav-btn:active {
+      background: var(--surface-raised);
+    }
+
+    .month-label {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       CALENDAR WRAPPER
+       Gap-as-border trick: wrapper bg (#2d2d2d = --border)
+       bleeds through the 1px gap between grid cells.
+    ══════════════════════════════════════════════════ */
+    .calendar-wrapper {
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      background: var(--border); /* becomes the grid lines */
+    }
+
+    /* Weekday header row */
+    .weekday-row {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .weekday-lbl {
+      padding: 10px 0;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    /* Sunday column subtle red tint */
+    .weekday-lbl:last-child {
+      color: var(--heavy-accent);
+      opacity: 0.65;
+    }
+
+    /* Day grid */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+    }
+
+    /* Individual day cell */
+    .day-cell {
+      position: relative;
+      min-height: 58px;
+      padding: 7px 6px 6px;
+      background: var(--dry);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: opacity var(--t-fast);
+    }
+
+    .day-cell:active {
+      opacity: 0.6;
+    }
+
+    /* Empty trailing cells */
+    .day-cell.empty {
+      background: var(--bg);
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* TODAY — inset white ring */
+    .day-cell.today::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--text-primary);
+      pointer-events: none;
+    }
+
+    /* Day number */
+    .day-num {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1;
+    }
+
+    .day-cell.today .day-num {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* State: mild */
+    .day-cell.mild { background: var(--mild-bg); }
+    .day-cell.mild .day-num { color: var(--mild-accent); }
+
+    /* State: moderate */
+    .day-cell.moderate { background: var(--moderate-bg); }
+    .day-cell.moderate .day-num { color: var(--moderate-accent); }
+
+    /* State: heavy */
+    .day-cell.heavy { background: var(--heavy-bg); }
+    .day-cell.heavy .day-num { color: var(--heavy-accent); }
+
+    /* SUE label at cell bottom */
+    .day-sue {
+      font-size: 9px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.1px;
+    }
+
+    .day-cell.mild     .day-sue { color: var(--mild-accent); }
+    .day-cell.moderate .day-sue { color: var(--moderate-accent); }
+    .day-cell.heavy    .day-sue { color: var(--heavy-accent); }
+
+    /* Hangover emoji — bottom-right corner */
+    .day-hangover {
+      position: absolute;
+      bottom: 4px;
+      right: 5px;
+      font-size: 13px;
+      line-height: 1;
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       DASHBOARD
+    ══════════════════════════════════════════════════ */
+    .dashboard {
+      margin-top: 28px;
+    }
+
+    .section-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* Full-width streak card */
+    .stat-card.wide {
+      grid-column: 1 / -1;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-card.wide .stat-group:last-child {
+      text-align: right;
+    }
+
+    .stat-val {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .stat-val.emoji {
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .stat-lbl {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-secondary);
+    }
+
+    .stat-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       DATA ACTIONS
+    ══════════════════════════════════════════════════ */
+    .data-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .action-btn {
+      flex: 1;
+      height: 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+
+    .action-btn:active {
+      background: var(--surface-raised);
+      color: var(--text-primary);
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       BOTTOM SHEET MODAL
+    ══════════════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+
+      /* Default: hidden */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--t-mid);
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .bottom-sheet {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--r-xl) var(--r-xl) 0 0;
+      max-height: 85dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;
+      padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+
+      /* Slide-up */
+      transform: translateY(100%);
+      transition: transform var(--t-sheet);
+    }
+
+    .bottom-sheet::-webkit-scrollbar { display: none; }
+
+    .modal-overlay.open .bottom-sheet {
+      transform: translateY(0);
+    }
+
+    /* Desktop: constrain width */
+    @media (min-width: 600px) {
+      .bottom-sheet {
+        max-width: 600px;
+        margin: 0 auto;
+        border-radius: var(--r-xl) var(--r-xl) 0 0;
+      }
+    }
+
+    /* Drag handle */
+    .sheet-handle-area {
+      padding: 14px 14px 4px;
+      display: flex;
+      justify-content: center;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Sheet header */
+    .sheet-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px 18px;
+    }
+
+    .sheet-date {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.6px;
+    }
+
+    .sheet-close-btn {
+      width: 44px;
+      height: 44px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-secondary);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+
+    .sheet-close-btn:active {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    /* Sheet body */
+    .sheet-body {
+      padding: 0 20px 8px;
+    }
+
+    .sheet-section-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    /* Quick drink 3 oszlopos sor */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .quick-btn {
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 14px 12px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+      text-align: left;
+      transition: border-color var(--t-fast), background var(--t-fast);
+    }
+
+    .quick-btn:active {
+      background: var(--border);
+      border-color: var(--text-secondary);
+    }
+
+    .q-emoji  { font-size: 22px; }
+
+    .q-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .q-detail {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Divider */
+    .sheet-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0 24px;
+    }
+
+    /* Hangover list */
+    .hangover-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .hangover-opt {
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 12px 16px;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      transition: border-color var(--t-fast), background var(--t-fast);
+    }
+
+    .hangover-opt:active {
+      border-color: var(--text-secondary);
+      background: var(--border);
+    }
+
+    .hangover-opt.selected {
+      border-color: var(--text-secondary);
+    }
+
+    .h-emoji { font-size: 22px; flex-shrink: 0; }
+
+    .h-lbl {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .h-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       ENTRANCE ANIMATIONS
+    ══════════════════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .calendar-wrapper {
+      animation: fadeUp var(--t-mid) both;
+    }
+
+    .dashboard {
+      animation: fadeUp var(--t-mid) 80ms both;
+    }
+
+    .data-actions {
+      animation: fadeUp var(--t-mid) 160ms both;
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       DESKTOP
+    ══════════════════════════════════════════════════ */
+    @media (min-width: 600px) {
+      #app {
+        padding: 32px 0 80px;
+      }
+
+      .app-header {
+        padding-top: 32px;
+      }
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       NAPI ÖSSZESÍTŐ (modal teteje)
+    ══════════════════════════════════════════════════ */
+    .day-total {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      margin-bottom: 20px;
+      transition: border-color var(--t-mid);
+    }
+
+    .total-sue-val {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -2px;
+      color: var(--text-primary);
+      line-height: 1;
+      transition: color var(--t-mid);
+    }
+
+    .total-unit-lbl {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .day-total.mild     { border-color: var(--mild-accent); }
+    .day-total.mild     .total-sue-val { color: var(--mild-accent); }
+    .day-total.moderate { border-color: var(--moderate-accent); }
+    .day-total.moderate .total-sue-val { color: var(--moderate-accent); }
+    .day-total.heavy    { border-color: var(--heavy-accent); }
+    .day-total.heavy    .total-sue-val { color: var(--heavy-accent); }
+
+
+    /* ══════════════════════════════════════════════════
+       EGYÉNI ITAL SZEKCIÓ
+    ══════════════════════════════════════════════════ */
+    .calc-section {
+      margin-bottom: 20px;
+    }
+
+    .calc-name-input {
+      width: 100%;
+      height: 52px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: max(16px, 1rem);
+      padding: 0 14px;
+      margin-bottom: 8px;
+      transition: border-color var(--t-fast);
+    }
+
+    .calc-name-input:focus {
+      outline: none;
+      border-color: var(--text-secondary);
+    }
+
+    .calc-name-input::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.45;
+      font-size: 13px;
+    }
+
+    .calc-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .calc-input {
+      height: 52px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 18px;
+      text-align: center;
+      width: 100%;
+      transition: border-color var(--t-fast);
+      /* Prevent zoom on iOS */
+      font-size: max(16px, 1rem);
+    }
+
+    .calc-input:focus {
+      outline: none;
+      border-color: var(--text-secondary);
+    }
+
+    .calc-input::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.45;
+      font-size: 13px;
+    }
+
+    .calc-input.error {
+      border-color: var(--heavy-accent);
+    }
+
+    .calc-add-btn {
+      width: 100%;
+      height: 52px;
+      background: var(--text-primary);
+      color: var(--bg);
+      border-radius: var(--r-sm);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      transition: opacity var(--t-fast);
+    }
+
+    .calc-add-btn:active { opacity: 0.75; }
+
+
+    /* ══════════════════════════════════════════════════
+       ITALOK LISTÁJA
+    ══════════════════════════════════════════════════ */
+    .drinks-log { margin-bottom: 4px; }
+
+    .drink-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      animation: fadeUp var(--t-mid) both;
+    }
+
+    .drink-item:last-child { border-bottom: none; }
+
+    .drink-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .drink-emoji { font-size: 20px; flex-shrink: 0; }
+
+    .drink-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .drink-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .drink-delete {
+      width: 36px;
+      height: 36px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-secondary);
+      font-size: 13px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+    }
+
+    .drink-delete:active {
+      background: var(--heavy-bg);
+      color: var(--heavy-accent);
+      border-color: var(--heavy-accent);
+    }
+
+
+    /* ══════════════════════════════════════════════════
+       INTERAKTÍV ÁLLAPOTOK
+    ══════════════════════════════════════════════════ */
+    .hangover-opt.selected {
+      border-color: var(--text-secondary);
+      background: var(--surface-raised);
+    }
+
+    .quick-btn.added {
+      border-color: var(--mild-accent);
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- ── HEADER ── -->
+    <header class="app-header">
+      <h1 class="app-title">Alcohol Calendar</h1>
+      <button class="icon-btn" id="share-btn" aria-label="Naptár megosztása">⬆</button>
+    </header>
+    <div class="share-panel" id="share-panel">
+      <span class="share-url" id="share-url-text"></span>
+      <button class="copy-btn" id="copy-btn" aria-label="Link másolása">📋</button>
+    </div>
+    <div class="friend-banner" id="friend-banner">
+      <span>👁 Barát naptárát nézed — csak olvasható</span>
+      <button class="friend-banner-own" id="own-calendar-btn">Saját naptáram →</button>
+    </div>
+
+    <!-- ── MONTH NAVIGATION ── -->
+    <nav class="month-nav" aria-label="Hónapnavigáció">
+      <button class="nav-btn" id="prev-month" aria-label="Előző hónap">‹</button>
+      <h2 class="month-label" id="month-label">Június 2026</h2>
+      <button class="nav-btn" id="next-month" aria-label="Következő hónap">›</button>
+    </nav>
+
+    <!-- ── CALENDAR ── -->
+    <div class="calendar-wrapper" role="grid" aria-label="Naptár">
+
+      <!-- Weekday headers — hétfőtől vasárnapig -->
+      <div class="weekday-row" role="row" aria-hidden="true">
+        <span class="weekday-lbl">H</span>
+        <span class="weekday-lbl">K</span>
+        <span class="weekday-lbl">Sze</span>
+        <span class="weekday-lbl">Cs</span>
+        <span class="weekday-lbl">P</span>
+        <span class="weekday-lbl">Szo</span>
+        <span class="weekday-lbl">V</span>
+      </div>
+
+      <!-- JS tölti fel renderCalendar() híváskor -->
+      <div class="calendar-grid" id="calendar-grid"></div>
+    </div><!-- /.calendar-wrapper -->
+
+
+    <!-- ── DASHBOARD ── -->
+    <section class="dashboard" aria-label="Havi statisztikák">
+      <p class="section-lbl" id="section-label">Június összesítő</p>
+      <div class="stats-grid">
+
+        <div class="stat-card">
+          <span class="stat-val" id="stat-dry-pct">—</span>
+          <span class="stat-lbl">Száraz napok aránya</span>
+          <span class="stat-sub" id="stat-dry-sub">0 / 0 eltelt nap</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-val" id="stat-sue">—</span>
+          <span class="stat-lbl">Havi egységek</span>
+          <span class="stat-sub">SUE összesen</span>
+        </div>
+
+        <div class="stat-card wide">
+          <div class="stat-group">
+            <span class="stat-lbl">Jelenlegi streak</span>
+            <span class="stat-val" id="stat-streak-cur">— nap</span>
+          </div>
+          <div class="stat-group">
+            <span class="stat-lbl">Max streak</span>
+            <span class="stat-val" id="stat-streak-max">— nap</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-val emoji" id="stat-fav-val">—</span>
+          <span class="stat-lbl">Kedvenc ital</span>
+          <span class="stat-sub" id="stat-fav-sub">Nincs adat</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── DATA ACTIONS ── -->
+    <div class="data-actions">
+      <button class="action-btn" id="export-btn" aria-label="Adatok exportálása">
+        <span>↓</span><span>Exportálás</span>
+      </button>
+      <button class="action-btn" id="import-btn" aria-label="Adatok importálása">
+        <span>↑</span><span>Importálás</span>
+      </button>
+    </div>
+    <input type="file" id="import-input" accept=".json" style="display:none" aria-hidden="true">
+
+  </div><!-- /#app -->
+
+
+  <!-- ══════════════════════════════════════════════════
+       BOTTOM SHEET MODAL
+       Alapállapot: zárva (nincs "open" class).
+       Fázis 2: JS toggleli a .modal-overlay "open" class-át.
+       Preview: manuálisan add hozzá az "open" class-t a .modal-overlay-hoz.
+  ══════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-label="Nap rögzítése">
+    <div class="bottom-sheet" id="bottom-sheet">
+
+      <div class="sheet-handle-area" aria-hidden="true">
+        <div class="sheet-handle"></div>
+      </div>
+
+      <div class="sheet-header">
+        <h3 class="sheet-date" id="sheet-date">Június 8.</h3>
+        <button class="sheet-close-btn" id="sheet-close" aria-label="Bezárás">✕</button>
+      </div>
+
+      <div class="sheet-body">
+
+        <!-- Napi összesítő -->
+        <div class="day-total" id="day-total">
+          <span class="total-sue-val" id="total-sue-val">0.0</span>
+          <span class="total-unit-lbl">egység ma</span>
+        </div>
+
+        <!-- Gyors hozzáadás -->
+        <p class="sheet-section-lbl">Gyors hozzáadás</p>
+        <div class="quick-grid">
+          <button class="quick-btn" data-name="Sör" data-emoji="🍺" data-ml="500" data-abv="5">
+            <span class="q-emoji">🍺</span>
+            <span class="q-name">Sör</span>
+            <span class="q-detail">500 ml · 5%</span>
+          </button>
+          <button class="quick-btn" data-name="Bor" data-emoji="🍷" data-ml="100" data-abv="12">
+            <span class="q-emoji">🍷</span>
+            <span class="q-name">Bor</span>
+            <span class="q-detail">1 dl · 12%</span>
+          </button>
+          <button class="quick-btn" data-name="Rövid" data-emoji="🥃" data-ml="40" data-abv="40">
+            <span class="q-emoji">🥃</span>
+            <span class="q-name">Rövid ital</span>
+            <span class="q-detail">4 cl · 40%</span>
+          </button>
+        </div>
+
+        <!-- Egyéni ital -->
+        <p class="sheet-section-lbl">Egyéni ital</p>
+        <div class="calc-section" id="calc-section">
+          <input class="calc-name-input" type="text" id="calc-name"
+            placeholder="ital neve (pl. Heineken, Rosé, Gin Tonic…)" maxlength="40" autocomplete="off">
+          <div class="calc-row">
+            <input class="calc-input" type="number" id="calc-ml"
+              placeholder="mennyiség (ml)" min="0.1" max="5000" step="0.1" inputmode="decimal">
+            <input class="calc-input" type="number" id="calc-abv"
+              placeholder="alkohol (%)" min="0" max="96" step="0.1" inputmode="decimal">
+          </div>
+          <button class="calc-add-btn" id="calc-add">+ Hozzáadás a naphoz</button>
+        </div>
+
+        <!-- Rögzített italok listája -->
+        <div class="drinks-log" id="drinks-log"></div>
+
+        <div class="sheet-divider"></div>
+
+        <!-- Másnaposság tracker -->
+        <p class="sheet-section-lbl">Másnaposság — hogyan érzed magad ma?</p>
+        <div class="hangover-list">
+          <button class="hangover-opt" data-level="1">
+            <span class="h-emoji">🏃‍♂️</span>
+            <div><div class="h-lbl">1 — Friss</div><div class="h-desc">Semmi bajom</div></div>
+          </button>
+          <button class="hangover-opt" data-level="2">
+            <span class="h-emoji">🥱</span>
+            <div><div class="h-lbl">2 — Kicsit fáradt</div><div class="h-desc">Kávéval megoldható</div></div>
+          </button>
+          <button class="hangover-opt" data-level="3">
+            <span class="h-emoji">🤕</span>
+            <div><div class="h-lbl">3 — Enyhe fejfájás</div><div class="h-desc">Tompaság, lassúság</div></div>
+          </button>
+          <button class="hangover-opt" data-level="4">
+            <span class="h-emoji">🤢</span>
+            <div><div class="h-lbl">4 — Erős másnaposság</div><div class="h-desc">Émelygés, gyengeség</div></div>
+          </button>
+          <button class="hangover-opt" data-level="5">
+            <span class="h-emoji">🤮</span>
+            <div><div class="h-lbl">5 — Zombi üzemmód</div><div class="h-desc">Teljes KO</div></div>
+          </button>
+        </div>
+
+      </div><!-- /.sheet-body -->
+    </div><!-- /.bottom-sheet -->
+  </div><!-- /.modal-overlay -->
+
+
+  <script>
+    /* ═══════════════════════════════════════════════
+       ÁLLAPOT
+    ═══════════════════════════════════════════════ */
+    const today  = new Date();
+    const state  = { year: today.getFullYear(), month: today.getMonth() };
+    let activeDay    = null;
+    let activeDayKey = null;
+
+    /* ═══════════════════════════════════════════════
+       KONSTANSOK
+    ═══════════════════════════════════════════════ */
+    const MONTHS = [
+      'Január','Február','Március','Április','Május','Június',
+      'Július','Augusztus','Szeptember','Október','November','December'
+    ];
+    const HANGOVER_EMOJI = ['','🏃‍♂️','🥱','🤕','🤢','🤮'];
+    const LS_KEY = 'alcohol_calendar_data';
+
+    let friendMode = false;
+    let friendData = {};
+    function getDisplayData() { return friendMode ? friendData : loadAll(); }
+
+    /* ═══════════════════════════════════════════════
+       LOCALSTORAGE
+    ═══════════════════════════════════════════════ */
+    function loadAll() {
+      try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+      catch { return {}; }
+    }
+
+    function saveAll(data) { localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+
+    function getDayData(key) {
+      return getDisplayData()[key] || { drinks: [], hangover: null, totalSue: 0 };
+    }
+
+    function saveDayData(key, d) {
+      const all = loadAll();
+      if (!d.drinks.length && !d.hangover) delete all[key];
+      else all[key] = d;
+      saveAll(all);
+    }
+
+    /* ═══════════════════════════════════════════════
+       SUE SZÁMÍTÁS
+    ═══════════════════════════════════════════════ */
+    function calcSue(ml, abv) {
+      return Math.round(((ml * (abv / 100) * 0.8) / 10) * 10) / 10;
+    }
+
+    function getSueClass(sue) {
+      if (!sue || sue === 0) return '';
+      if (sue <= 1.5) return 'mild';
+      if (sue <= 4.0) return 'moderate';
+      return 'heavy';
+    }
+
+    /* ═══════════════════════════════════════════════
+       DRINK MŰVELETEK
+    ═══════════════════════════════════════════════ */
+    function dayKey(y, m, d) { return `${y}-${m + 1}-${d}`; }
+
+    function addDrink(key, drink) {
+      const d = getDayData(key);
+      d.drinks.push(drink);
+      d.totalSue = Math.round(d.drinks.reduce((s, x) => s + x.sue, 0) * 10) / 10;
+      saveDayData(key, d);
+      return d;
+    }
+
+    function removeDrink(key, idx) {
+      const d = getDayData(key);
+      d.drinks.splice(idx, 1);
+      d.totalSue = Math.round(d.drinks.reduce((s, x) => s + x.sue, 0) * 10) / 10;
+      saveDayData(key, d);
+      return d;
+    }
+
+    function setHangover(key, level) {
+      const d = getDayData(key);
+      d.hangover = d.hangover === level ? null : level;
+      saveDayData(key, d);
+      return d;
+    }
+
+    /* ═══════════════════════════════════════════════
+       CELL BUILDER
+    ═══════════════════════════════════════════════ */
+    function buildCell(day, data) {
+      const { year, month } = state;
+      const isToday  = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+      const sueClass = getSueClass(data.totalSue);
+
+      const cell = document.createElement('div');
+      cell.setAttribute('role', 'gridcell');
+      cell.className = ['day-cell', sueClass, isToday ? 'today' : ''].filter(Boolean).join(' ');
+      if (isToday) cell.setAttribute('aria-current', 'date');
+      cell.setAttribute('aria-label', `${MONTHS[month]} ${day}.`);
+
+      const numEl = document.createElement('span');
+      numEl.className = 'day-num';
+      numEl.textContent = day;
+      cell.appendChild(numEl);
+
+      if (data.totalSue > 0) {
+        const sueEl = document.createElement('span');
+        sueEl.className = 'day-sue';
+        sueEl.textContent = data.totalSue.toFixed(1);
+        cell.appendChild(sueEl);
+      }
+
+      if (data.hangover) {
+        const hangEl = document.createElement('span');
+        hangEl.className = 'day-hangover';
+        hangEl.textContent = HANGOVER_EMOJI[data.hangover];
+        cell.appendChild(hangEl);
+      }
+
+      cell.addEventListener('click', () => { if (!friendMode) openModal(day); });
+      return cell;
+    }
+
+    /* ═══════════════════════════════════════════════
+       NAPTÁR RENDERELÉS
+    ═══════════════════════════════════════════════ */
+    function renderCalendar() {
+      const { year, month } = state;
+      const allData = loadAll();
+      const grid    = document.getElementById('calendar-grid');
+
+      document.getElementById('month-label').textContent   = `${MONTHS[month]} ${year}`;
+      document.getElementById('section-label').textContent = `${MONTHS[month]} összesítő`;
+
+      const firstDay    = new Date(year, month, 1).getDay();
+      const offset      = firstDay === 0 ? 6 : firstDay - 1;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const totalCells  = Math.ceil((offset + daysInMonth) / 7) * 7;
+
+      const frag = document.createDocumentFragment();
+
+      for (let i = 0; i < totalCells; i++) {
+        const day = i - offset + 1;
+        let cell;
+        if (day < 1 || day > daysInMonth) {
+          cell = document.createElement('div');
+          cell.setAttribute('role', 'gridcell');
+          cell.className = 'day-cell empty';
+          cell.setAttribute('aria-hidden', 'true');
+        } else {
+          const key  = dayKey(year, month, day);
+          const data = allData[key] || { drinks: [], hangover: null, totalSue: 0 };
+          cell = buildCell(day, data);
+        }
+        frag.appendChild(cell);
+      }
+
+      grid.innerHTML = '';
+      grid.appendChild(frag);
+      updateDashboard();
+    }
+
+    function updateCell(day) {
+      const { year, month } = state;
+      const firstDay = new Date(year, month, 1).getDay();
+      const offset   = firstDay === 0 ? 6 : firstDay - 1;
+      const grid     = document.getElementById('calendar-grid');
+      const data     = getDayData(dayKey(year, month, day));
+      grid.replaceChild(buildCell(day, data), grid.children[offset + day - 1]);
+    }
+
+    /* ═══════════════════════════════════════════════
+       DASHBOARD STATISZTIKÁK
+    ═══════════════════════════════════════════════ */
+    function updateDashboard() {
+      const { year, month } = state;
+      const allData = getDisplayData();
+      const now     = new Date();
+
+      const isFuture = year > now.getFullYear() ||
+        (year === now.getFullYear() && month > now.getMonth());
+
+      if (isFuture) {
+        document.getElementById('stat-dry-pct').textContent    = '—';
+        document.getElementById('stat-dry-sub').textContent    = 'Nincs adat';
+        document.getElementById('stat-sue').textContent        = '—';
+        document.getElementById('stat-streak-cur').textContent = '— nap';
+        document.getElementById('stat-streak-max').textContent = '— nap';
+        document.getElementById('stat-fav-val').textContent    = '—';
+        document.getElementById('stat-fav-sub').textContent    = 'Nincs adat';
+        return;
+      }
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const isCurMonth  = year === now.getFullYear() && month === now.getMonth();
+      const elapsed     = isCurMonth ? now.getDate() : daysInMonth;
+
+      let dryDays  = 0;
+      let totalSue = 0;
+      const drinkMap = {}; // name → { count, emoji }
+
+      for (let d = 1; d <= elapsed; d++) {
+        const data = allData[dayKey(year, month, d)];
+        if (!data || data.totalSue === 0) {
+          dryDays++;
+        } else {
+          totalSue += data.totalSue;
+          data.drinks.forEach(dr => {
+            if (!drinkMap[dr.name]) drinkMap[dr.name] = { count: 0, emoji: dr.emoji };
+            drinkMap[dr.name].count++;
+          });
+        }
+      }
+
+      totalSue = Math.round(totalSue * 10) / 10;
+      const dryPct = elapsed > 0 ? Math.round((dryDays / elapsed) * 100) : 0;
+
+      // Kedvenc ital
+      let favName = '', favEmoji = '', favCount = 0;
+      Object.entries(drinkMap).forEach(([name, { count, emoji }]) => {
+        if (count > favCount) { favCount = count; favName = name; favEmoji = emoji; }
+      });
+
+      // Max streak (forward scan)
+      let maxStreak = 0, tempStreak = 0;
+      for (let d = 1; d <= elapsed; d++) {
+        const data = allData[dayKey(year, month, d)];
+        if (!data || data.totalSue === 0) { tempStreak++; if (tempStreak > maxStreak) maxStreak = tempStreak; }
+        else tempStreak = 0;
+      }
+
+      // Jelenlegi streak (backward scan)
+      let curStreak = 0;
+      for (let d = elapsed; d >= 1; d--) {
+        const data = allData[dayKey(year, month, d)];
+        if (!data || data.totalSue === 0) curStreak++;
+        else break;
+      }
+
+      document.getElementById('stat-dry-pct').textContent    = `${dryPct}%`;
+      document.getElementById('stat-dry-sub').textContent    = `${dryDays} / ${elapsed} eltelt nap`;
+      document.getElementById('stat-sue').textContent        = totalSue.toFixed(1);
+      document.getElementById('stat-streak-cur').textContent = `${curStreak} nap`;
+      document.getElementById('stat-streak-max').textContent = `${maxStreak} nap`;
+      document.getElementById('stat-fav-val').textContent    = favCount > 0 ? favEmoji : '—';
+      document.getElementById('stat-fav-sub').textContent    = favCount > 0 ? `${favName} (${favCount}×)` : 'Nincs adat';
+    }
+
+    function afterChange() {
+      refreshModal();
+      updateCell(activeDay);
+      updateDashboard();
+    }
+
+    /* ═══════════════════════════════════════════════
+       HÓNAPVÁLTÁS
+    ═══════════════════════════════════════════════ */
+    function changeMonth(dir) {
+      const wrapper = document.querySelector('.calendar-wrapper');
+      wrapper.style.transition = 'opacity 120ms ease';
+      wrapper.style.opacity    = '0.25';
+      setTimeout(() => {
+        state.month += dir;
+        if (state.month < 0)  { state.month = 11; state.year--; }
+        if (state.month > 11) { state.month = 0;  state.year++; }
+        renderCalendar();
+        wrapper.style.opacity = '1';
+      }, 120);
+    }
+
+    document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('next-month').addEventListener('click', () => changeMonth(+1));
+
+    /* ═══════════════════════════════════════════════
+       MODAL MEGNYITÁS / FRISSÍTÉS
+    ═══════════════════════════════════════════════ */
+    const overlay   = document.getElementById('modal-overlay');
+    const sheet     = document.getElementById('bottom-sheet');
+    const dateLabel = document.getElementById('sheet-date');
+
+    function openModal(day) {
+      activeDay    = day;
+      activeDayKey = dayKey(state.year, state.month, day);
+      dateLabel.textContent = `${MONTHS[state.month]} ${day}.`;
+      document.getElementById('calc-name').value = '';
+      document.getElementById('calc-ml').value   = '';
+      document.getElementById('calc-abv').value  = '';
+      sheet.scrollTop = 0;
+      refreshModal();
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function refreshModal() {
+      if (!activeDayKey) return;
+      const data = getDayData(activeDayKey);
+
+      // Összesítő
+      const cls = getSueClass(data.totalSue);
+      document.getElementById('total-sue-val').textContent = data.totalSue.toFixed(1);
+      document.getElementById('day-total').className = ['day-total', cls].filter(Boolean).join(' ');
+
+      // Italok listája
+      document.getElementById('drinks-log').innerHTML = data.drinks.map((d, i) => `
+        <div class="drink-item">
+          <div class="drink-info">
+            <span class="drink-emoji">${d.emoji}</span>
+            <div>
+              <div class="drink-name">${d.name}</div>
+              <div class="drink-meta">${d.ml} ml · ${d.abv}% · <strong>+${d.sue.toFixed(1)} egység</strong></div>
+            </div>
+          </div>
+          <button class="drink-delete" data-idx="${i}" aria-label="Törlés">✕</button>
+        </div>`).join('');
+
+      // Másnaposság kiválasztás
+      document.querySelectorAll('.hangover-opt').forEach(opt =>
+        opt.classList.toggle('selected', parseInt(opt.dataset.level) === data.hangover)
+      );
+    }
+
+    document.getElementById('sheet-close').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+    // Ital törlés — event delegation
+    document.getElementById('drinks-log').addEventListener('click', e => {
+      const btn = e.target.closest('.drink-delete');
+      if (!btn) return;
+      removeDrink(activeDayKey, parseInt(btn.dataset.idx));
+      afterChange();
+    });
+
+    /* ═══════════════════════════════════════════════
+       GYORS HOZZÁADÁS GOMBOK
+    ═══════════════════════════════════════════════ */
+    document.querySelectorAll('.quick-btn[data-ml]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ml  = parseFloat(btn.dataset.ml);
+        const abv = parseFloat(btn.dataset.abv);
+        addDrink(activeDayKey, {
+          name: btn.dataset.name, emoji: btn.dataset.emoji,
+          ml, abv, sue: calcSue(ml, abv), ts: Date.now()
+        });
+        afterChange();
+        btn.classList.add('added');
+        setTimeout(() => btn.classList.remove('added'), 600);
+      });
+    });
+
+    /* ═══════════════════════════════════════════════
+       EGYÉNI ITAL HOZZÁADÁS
+    ═══════════════════════════════════════════════ */
+    function autoEmoji(abv) {
+      if (abv <= 3)  return '🧃';
+      if (abv <= 8)  return '🍺';
+      if (abv <= 15) return '🍷';
+      return '🥃';
+    }
+
+    document.getElementById('calc-add').addEventListener('click', () => {
+      const nameEl = document.getElementById('calc-name');
+      const mlEl   = document.getElementById('calc-ml');
+      const abvEl  = document.getElementById('calc-abv');
+      const ml     = parseFloat(mlEl.value);
+      const abv    = parseFloat(abvEl.value);
+
+      const mlOk  = !isNaN(ml)  && ml  > 0;
+      const abvOk = !isNaN(abv) && abv >= 0 && abv <= 96;
+
+      if (!mlOk)  { mlEl.classList.add('error');  setTimeout(() => mlEl.classList.remove('error'),  1200); }
+      if (!abvOk) { abvEl.classList.add('error'); setTimeout(() => abvEl.classList.remove('error'), 1200); }
+      if (!mlOk || !abvOk) return;
+
+      const name = nameEl.value.trim() || 'Egyéni ital';
+      addDrink(activeDayKey, { name, emoji: autoEmoji(abv), ml, abv, sue: calcSue(ml, abv), ts: Date.now() });
+      nameEl.value = ''; mlEl.value = ''; abvEl.value = '';
+      afterChange();
+    });
+
+    /* ═══════════════════════════════════════════════
+       MÁSNAPOSSÁG
+    ═══════════════════════════════════════════════ */
+    document.querySelectorAll('.hangover-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        setHangover(activeDayKey, parseInt(opt.dataset.level));
+        afterChange();
+      });
+    });
+
+    /* ═══════════════════════════════════════════════
+       SWIPE-TO-CLOSE
+    ═══════════════════════════════════════════════ */
+    let touchStartY = 0, dragging = false;
+
+    sheet.addEventListener('touchstart', e => {
+      if (sheet.scrollTop > 0) return;
+      touchStartY = e.touches[0].clientY;
+      dragging = true;
+      sheet.style.transition = 'none';
+    }, { passive: true });
+
+    sheet.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (dy > 0) sheet.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+
+    sheet.addEventListener('touchend', e => {
+      if (!dragging) return;
+      dragging = false;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      sheet.style.transition = '';
+      if (dy > 100) {
+        sheet.style.transform = 'translateY(100vh)';
+        setTimeout(() => { sheet.style.transform = ''; closeModal(); }, 380);
+      } else {
+        sheet.style.transform = '';
+      }
+    });
+
+    /* ═══════════════════════════════════════════════
+       EXPORT / IMPORT
+    ═══════════════════════════════════════════════ */
+    document.getElementById('export-btn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(loadAll(), null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'alcohol_calendar_backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    const importInput = document.getElementById('import-input');
+
+    document.getElementById('import-btn').addEventListener('click', () => {
+      importInput.value = '';
+      importInput.click();
+    });
+
+    importInput.addEventListener('change', () => {
+      const file = importInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+            throw new Error('Érvénytelen formátum');
+          }
+          for (const [key, val] of Object.entries(parsed)) {
+            if (typeof val !== 'object' || !Array.isArray(val.drinks)) {
+              throw new Error('Hibás adat: ' + key);
+            }
+          }
+          saveAll(parsed);
+          renderCalendar();
+          alert('Importálás sikeres! ' + Object.keys(parsed).length + ' nap betöltve.');
+        } catch (err) {
+          alert('Importálási hiba: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    /* ═══════════════════════════════════════════════
+       MEGOSZTÁS
+    ═══════════════════════════════════════════════ */
+    document.getElementById('share-btn').addEventListener('click', () => {
+      const panel = document.getElementById('share-panel');
+      if (panel.classList.contains('visible')) {
+        panel.classList.remove('visible');
+        return;
+      }
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(loadAll()))));
+      const url = `${location.origin}${location.pathname}#share=${encoded}`;
+      const urlEl = document.getElementById('share-url-text');
+      urlEl.textContent = url;
+      urlEl.dataset.full = url;
+      panel.classList.add('visible');
+    });
+
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const url = document.getElementById('share-url-text').dataset.full;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = '✓';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = '📋'; btn.classList.remove('copied'); }, 1800);
+      });
+    });
+
+    document.getElementById('own-calendar-btn').addEventListener('click', () => {
+      history.replaceState(null, '', location.pathname);
+      location.reload();
+    });
+
+    /* ═══════════════════════════════════════════════
+       SHARE LINK DETEKTÁLÁS
+    ═══════════════════════════════════════════════ */
+    (function() {
+      const hash = location.hash;
+      if (!hash.startsWith('#share=')) return;
+      try {
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(hash.slice(7)))));
+        if (typeof decoded !== 'object' || Array.isArray(decoded) || decoded === null) return;
+        for (const val of Object.values(decoded)) {
+          if (typeof val !== 'object' || !Array.isArray(val.drinks)) return;
+        }
+        friendMode = true;
+        friendData = decoded;
+        document.getElementById('friend-banner').classList.add('visible');
+        document.getElementById('share-btn').style.display = 'none';
+      } catch(e) { /* érvénytelen link */ }
+    })();
+
+    /* ═══════════════════════════════════════════════
+       INIT
+    ═══════════════════════════════════════════════ */
+    renderCalendar();
+  </script>
+
+</body>
+</html>
